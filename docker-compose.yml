@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  db-proxy:
+    build: .
+    container_name: distributed-db-proxy
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - postgres-shard-1-primary
+      - postgres-shard-2-primary
+      - redis
+    networks:
+      - data-infra-net
+
+  postgres-shard-1-primary:
+    image: postgres:16-alpine
+    container_name: pg-shard-1-primary
+    environment:
+      POSTGRES_USER: proxy_user
+      POSTGRES_PASSWORD: proxy_password
+      POSTGRES_DB: shard_1_db
+    ports:
+      - "5432:5432"
+    networks:
+      - data-infra-net
+
+  postgres-shard-2-primary:
+    image: postgres:16-alpine
+    container_name: pg-shard-2-primary
+    environment:
+      POSTGRES_USER: proxy_user
+      POSTGRES_PASSWORD: proxy_password
+      POSTGRES_DB: shard_2_db
+    ports:
+      - "5433:5432"
+    networks:
+      - data-infra-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: distributed-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - data-infra-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: infra-prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - data-infra-net
+
+networks:
+  data-infra-net:
+    driver: bridge
